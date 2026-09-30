@@ -205,6 +205,8 @@ pub struct AttentionRow {
     pub action_type: String,
     pub due_at: Option<String>,
     pub requires_confirmation: bool,
+    pub status: String,
+    pub payload: serde_json::Value,
 }
 
 #[derive(Debug, Serialize)]
@@ -236,7 +238,7 @@ pub fn get_home_workspace(app: tauri::AppHandle) -> Result<HomeWorkspace, String
     ).map_err(|e| e.to_string())?;
 
     let mut attention_stmt = db.prepare(
-        "SELECT ac.id,a.id,c.id,c.name,j.title,a.stage,ac.type,ac.due_at,ac.requires_confirmation
+        "SELECT ac.id,a.id,c.id,c.name,j.title,a.stage,ac.type,ac.due_at,ac.requires_confirmation,ac.status,ac.payload
          FROM actions ac
          JOIN applications a ON ac.entity_type='application' AND ac.entity_id=a.id
          JOIN candidates c ON c.id=a.candidate_id
@@ -247,7 +249,8 @@ pub fn get_home_workspace(app: tauri::AppHandle) -> Result<HomeWorkspace, String
     let attention = attention_stmt.query_map([], |r| Ok(AttentionRow {
         action_id:r.get(0)?, application_id:r.get(1)?, candidate_id:r.get(2)?,
         candidate_name:r.get(3)?, job_title:r.get(4)?, stage:r.get(5)?,
-        action_type:r.get(6)?, due_at:r.get(7)?, requires_confirmation:r.get::<_,i64>(8)? != 0
+        action_type:r.get(6)?, due_at:r.get(7)?, requires_confirmation:r.get::<_,i64>(8)? != 0,
+        status:r.get(9)?, payload:serde_json::from_str::<serde_json::Value>(&r.get::<_,String>(10)?).unwrap_or_else(|_| serde_json::json!({}))
     })).map_err(|e| e.to_string())?
       .collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())?;
 
