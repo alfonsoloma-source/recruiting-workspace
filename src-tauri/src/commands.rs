@@ -136,3 +136,60 @@ pub fn list_candidate_workspace(app: tauri::AppHandle) -> Result<Vec<CandidateWo
     })).map_err(|e| e.to_string())?;
     rows.collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())
 }
+
+
+#[derive(Debug, Serialize)]
+pub struct JobWorkspaceRow {
+    pub job_id: String,
+    pub title: String,
+    pub status: String,
+    pub total: i64,
+    pub new_count: i64,
+    pub screening_count: i64,
+    pub interview_count: i64,
+    pub finalist_count: i64,
+}
+
+#[tauri::command]
+pub fn list_job_workspace(app: tauri::AppHandle) -> Result<Vec<JobWorkspaceRow>, String> {
+    let db = conn(&app)?;
+    let mut stmt = db.prepare(
+        "SELECT j.id,j.title,j.status,
+         COUNT(a.id),
+         SUM(CASE WHEN LOWER(a.stage) IN ('new','nuevo') THEN 1 ELSE 0 END),
+         SUM(CASE WHEN LOWER(a.stage)='screening' THEN 1 ELSE 0 END),
+         SUM(CASE WHEN LOWER(a.stage) IN ('interview','entrevista','técnica','tecnica') THEN 1 ELSE 0 END),
+         SUM(CASE WHEN LOWER(a.stage) IN ('finalist','finalista') THEN 1 ELSE 0 END)
+         FROM jobs j
+         LEFT JOIN applications a ON a.job_id=j.id AND a.status='active'
+         GROUP BY j.id,j.title,j.status
+         ORDER BY j.created_at DESC"
+    ).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |r| Ok(JobWorkspaceRow {
+        job_id:r.get(0)?, title:r.get(1)?, status:r.get(2)?, total:r.get(3)?,
+        new_count:r.get::<_,Option<i64>>(4)?.unwrap_or(0),
+        screening_count:r.get::<_,Option<i64>>(5)?.unwrap_or(0),
+        interview_count:r.get::<_,Option<i64>>(6)?.unwrap_or(0),
+        finalist_count:r.get::<_,Option<i64>>(7)?.unwrap_or(0)
+    })).map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_job_applications(app: tauri::AppHandle, job_id: String) -> Result<Vec<CandidateWorkspaceRow>, String> {
+    let db = conn(&app)?;
+    let mut stmt = db.prepare(
+        "SELECT a.id,c.id,c.name,c.email,j.id,j.title,a.stage,a.status,a.updated_at
+         FROM applications a
+         JOIN candidates c ON c.id=a.candidate_id
+         JOIN jobs j ON j.id=a.job_id
+         WHERE j.id=?1
+         ORDER BY a.updated_at DESC"
+    ).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([job_id], |r| Ok(CandidateWorkspaceRow {
+        application_id:r.get(0)?, candidate_id:r.get(1)?, candidate_name:r.get(2)?,
+        email:r.get(3)?, job_id:r.get(4)?, job_title:r.get(5)?, stage:r.get(6)?,
+        status:r.get(7)?, updated_at:r.get(8)?
+    })).map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())
+}
