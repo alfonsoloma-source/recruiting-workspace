@@ -40,6 +40,6 @@ pub fn delete_provider_credential(provider: String) -> Result<CredentialStatus, 
     }
 }
 
-pub fn read_provider_credential(provider: &str) -> Result<String, String> {
+pub(crate) fn read_provider_credential(provider: &str) -> Result<String, String> {
     entry(provider)?.get_password().map_err(|e| e.to_string())
 }
