@@ -37,10 +37,10 @@ jobs:
           python3 - <<'PY'
           import struct, zlib
           width=height=1
-          raw=b'\\x00\\x00\\x00\\x00\\xff'
+          raw=bytes([0, 0, 0, 255])
           def chunk(t,d):
               return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
-          png=b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',width,height,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
+          png=bytes([137,80,78,71,13,10,26,10])+chunk(b'IHDR',struct.pack('>IIBBBBB',width,height,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
           open('src-tauri/icons/icon.png','wb').write(png)
           PY
       - uses: dtolnay/rust-toolchain@stable
