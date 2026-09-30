@@ -66,8 +66,23 @@ export type HomeWorkspace = {
   new_candidates: CandidateWorkspace[];
 };
 
+export type InterviewWorkspace = {
+  interview_id: string;
+  application_id: string;
+  candidate_id: string;
+  candidate_name: string;
+  job_title: string;
+  stage: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  provider?: string | null;
+};
+
 export const recruiting = {
   getHomeWorkspace: () => invoke<HomeWorkspace>("get_home_workspace"),
+  listInterviews: () => invoke<InterviewWorkspace[]>("list_interview_workspace"),
+  createInterview: (input: { application_id: string; starts_at: string; ends_at: string; provider?: string | null }) => invoke<string>("create_interview", { input }),
   listCandidates: () => invoke<Candidate[]>("list_candidates"),\n  listCandidateWorkspace: () => invoke<CandidateWorkspace[]>("list_candidate_workspace"),
   createCandidate: (input: Omit<Candidate, "id">) =>
     invoke<Candidate>("create_candidate", { input }),
