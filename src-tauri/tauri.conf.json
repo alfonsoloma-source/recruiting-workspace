@@ -13,5 +13,9 @@
     "windows": [{ "title": "Recruiting Workspace", "width": 1440, "height": 900, "minWidth": 1024, "minHeight": 700 }],
     "security": { "csp": null }
   },
-  "bundle": { "active": true, "targets": "all", "icon": [] }
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": ["icons/icon.png", "icons/icon.ico"]
+  }
 }
