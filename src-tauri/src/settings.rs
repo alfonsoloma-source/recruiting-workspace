@@ -18,6 +18,10 @@ impl Default for AiSettings {
 
 #[tauri::command]
 pub fn get_ai_settings(app: tauri::AppHandle) -> Result<AiSettings, String> {
+    read_ai_settings(&app)
+}
+
+pub fn read_ai_settings(app: &tauri::AppHandle) -> Result<AiSettings, String> {
     let store = app.store(SETTINGS_FILE).map_err(|e| e.to_string())?;
     let Some(value) = store.get(AI_PROVIDER_KEY) else { return Ok(AiSettings::default()); };
     serde_json::from_value(value).map_err(|e| e.to_string())
