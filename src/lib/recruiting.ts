@@ -23,8 +23,20 @@ export type Application = {
   status: string;
 };
 
-export const recruiting = {
-  listCandidates: () => invoke<Candidate[]>("list_candidates"),
+
+export type CandidateWorkspace = {
+  application_id: string;
+  candidate_id: string;
+  candidate_name: string;
+  email?: string | null;
+  job_id: string;
+  job_title: string;
+  stage: string;
+  status: string;
+  updated_at: string;
+};
+\nexport const recruiting = {
+  listCandidates: () => invoke<Candidate[]>("list_candidates"),\n  listCandidateWorkspace: () => invoke<CandidateWorkspace[]>("list_candidate_workspace"),
   createCandidate: (input: Omit<Candidate, "id">) =>
     invoke<Candidate>("create_candidate", { input }),
 
