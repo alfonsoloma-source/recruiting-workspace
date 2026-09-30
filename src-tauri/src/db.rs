@@ -50,5 +50,9 @@ fn seed_demo_if_empty(conn: &Connection) -> Result<()> {
     conn.execute("INSERT INTO applications(id,candidate_id,job_id,stage,status,applied_at,updated_at) VALUES('demo-app-maria','demo-candidate-maria','demo-job-pm','Nuevo','active',?1,?1)", params![now_s])?;
 
     conn.execute("INSERT INTO actions(id,type,entity_type,entity_id,status,due_at,requires_confirmation,payload,created_at,updated_at) VALUES('demo-action-isabela','follow_up','application','demo-app-isabela','requested',?1,1,'{}',?2,?2)", params![seven_days_ago,now_s])?;
+
+    let interview_start = (now + Duration::hours(2)).to_rfc3339();
+    let interview_end = (now + Duration::hours(3)).to_rfc3339();
+    conn.execute("INSERT INTO interviews(id,application_id,starts_at,ends_at,status,provider) VALUES('demo-interview-javier','demo-app-javier',?1,?2,'scheduled','Local')", params![interview_start,interview_end])?;
     Ok(())
 }
