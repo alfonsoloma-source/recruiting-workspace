@@ -93,6 +93,7 @@ export type WorkspaceAction = {
 };
 
 export const recruiting = {
+  generateActionDraft: (actionId:string) => invoke<{provider:string;content:string}>("generate_action_draft",{actionId}),
   createAction: (input: { action_type:string; entity_type:string; entity_id:string; due_at?:string|null; requires_confirmation?:boolean; payload?:Record<string,unknown> }) => invoke<WorkspaceAction>("create_action",{input}),
   prepareAction: (id:string,payload:Record<string,unknown>) => invoke<WorkspaceAction>("prepare_action",{id,payload}),
   requestActionConfirmation: (id:string) => invoke<WorkspaceAction>("request_action_confirmation",{id}),
