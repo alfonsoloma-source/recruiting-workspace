@@ -57,6 +57,8 @@ export type AttentionItem = {
   action_type: string;
   due_at?: string | null;
   requires_confirmation: boolean;
+  status: "requested" | "prepared" | "awaiting_confirmation";
+  payload: Record<string, unknown>;
 };
 
 export type HomeWorkspace = {
