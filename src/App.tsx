@@ -39,7 +39,7 @@ export default function App() {
       <div className="asideBottom"><button onClick={()=>setView("connections")}><Plug size={17}/>Conexiones</button><div className="profile"><span>CR</span><div><strong>Carla Ríos</strong><small>Recruiter</small></div></div></div>
     </aside>
     <main>
-      {view==="home" && <Home data={home} openCandidate={openCandidate} prepareFollowup={async(item)=>{const action=await recruiting.prepareAction(item.action_id,{message:""});setDraftAction({id:action.id,candidate:item.candidate_name,job:item.job_title,message:"",status:action.status});}}/>}
+      {view==="home" && <Home data={home} openCandidate={openCandidate} prepareFollowup={async(item)=>{const draft=await recruiting.generateActionDraft(item.action_id);setDraftAction({id:item.action_id,candidate:item.candidate_name,job:item.job_title,message:draft.content,status:"prepared"});}}/>}
       {view==="candidates" && <Candidates rows={rows} loading={loading} openCandidate={openCandidate}/>}
       {view==="candidate" && selected && <CandidateDetail row={selected} back={()=>setView("candidates")} refresh={loadCandidates}/>}
       {view==="jobs" && <Jobs jobs={jobs} openJob={openJob}/>}
