@@ -34,7 +34,15 @@ jobs:
       - name: Create temporary Tauri icon for CI
         run: |
           mkdir -p src-tauri/icons
-          echo 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 --decode > src-tauri/icons/icon.png
+          python3 - <<'PY'
+          import struct, zlib
+          width=height=1
+          raw=b'\\x00\\x00\\x00\\x00\\xff'
+          def chunk(t,d):
+              return struct.pack('>I',len(d))+t+d+struct.pack('>I',zlib.crc32(t+d)&0xffffffff)
+          png=b'\\x89PNG\\r\\n\\x1a\\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',width,height,8,6,0,0,0))+chunk(b'IDAT',zlib.compress(raw))+chunk(b'IEND',b'')
+          open('src-tauri/icons/icon.png','wb').write(png)
+          PY
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
