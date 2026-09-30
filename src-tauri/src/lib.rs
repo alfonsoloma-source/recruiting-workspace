@@ -23,7 +23,8 @@ pub fn run() {
             commands::add_candidate_note,
             commands::list_candidate_workspace,
             commands::list_job_workspace,
-            commands::list_job_applications
+            commands::list_job_applications,
+            commands::get_home_workspace
         ])
         .run(tauri::generate_context!())
         .expect("error while running Recruiting Workspace");
