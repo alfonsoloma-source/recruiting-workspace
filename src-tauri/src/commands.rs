@@ -104,3 +104,35 @@ pub fn add_candidate_note(app:tauri::AppHandle,input:NewNote)->Result<String,Str
     db.execute("INSERT INTO notes(id,candidate_id,application_id,content,created_at,updated_at) VALUES(?1,?2,?3,?4,?5,?5)",params![id,input.candidate_id,input.application_id,input.content,now]).map_err(|e|e.to_string())?;
     Ok(id)
 }
+
+
+#[derive(Debug, Serialize)]
+pub struct CandidateWorkspaceRow {
+    pub application_id: String,
+    pub candidate_id: String,
+    pub candidate_name: String,
+    pub email: Option<String>,
+    pub job_id: String,
+    pub job_title: String,
+    pub stage: String,
+    pub status: String,
+    pub updated_at: String,
+}
+
+#[tauri::command]
+pub fn list_candidate_workspace(app: tauri::AppHandle) -> Result<Vec<CandidateWorkspaceRow>, String> {
+    let db = conn(&app)?;
+    let mut stmt = db.prepare(
+        "SELECT a.id,c.id,c.name,c.email,j.id,j.title,a.stage,a.status,a.updated_at
+         FROM applications a
+         JOIN candidates c ON c.id=a.candidate_id
+         JOIN jobs j ON j.id=a.job_id
+         ORDER BY a.updated_at DESC"
+    ).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |r| Ok(CandidateWorkspaceRow {
+        application_id:r.get(0)?, candidate_id:r.get(1)?, candidate_name:r.get(2)?,
+        email:r.get(3)?, job_id:r.get(4)?, job_title:r.get(5)?, stage:r.get(6)?,
+        status:r.get(7)?, updated_at:r.get(8)?
+    })).map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())
+}
