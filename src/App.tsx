@@ -14,7 +14,9 @@ export default function App() {
   const [jobs,setJobs]=useState<JobWorkspace[]>([]);
   const [selectedJob,setSelectedJob]=useState<JobWorkspace|null>(null);
   const [jobRows,setJobRows]=useState<CandidateWorkspace[]>([]);
-  const [home,setHome]=useState<HomeWorkspace|null>(null);\n  const [interviews,setInterviews]=useState<InterviewWorkspace[]>([]);\n  const [draftAction,setDraftAction]=useState<{id:string;candidate:string;job:string;message:string;status:string}|null>(null);
+  const [home,setHome]=useState<HomeWorkspace|null>(null);
+  const [interviews,setInterviews]=useState<InterviewWorkspace[]>([]);
+  const [draftAction,setDraftAction]=useState<{id:string;candidate:string;job:string;message:string;status:string}|null>(null);
 
   async function loadCandidates(){
     setLoading(true);
@@ -46,7 +48,8 @@ export default function App() {
       {view==="job" && selectedJob && <JobDetail job={selectedJob} rows={jobRows} back={()=>setView("jobs")} openCandidate={openCandidate}/>}
       {view==="agenda" && <Agenda interviews={interviews} openCandidate={openCandidate}/>}
       {view==="connections" && <Placeholder title="Conexiones" text="Tus herramientas, permisos y proveedores vivirán aquí."/>}
-      {draftAction && <ActionComposer draft={draftAction} setDraft={setDraftAction} close={()=>setDraftAction(null)} refreshHome={()=>recruiting.getHomeWorkspace().then(setHome)}/>}\n    </main>
+      {draftAction && <ActionComposer draft={draftAction} setDraft={setDraftAction} close={()=>setDraftAction(null)} refreshHome={()=>recruiting.getHomeWorkspace().then(setHome)}/>}
+    </main>
   </div>;
 }
 
