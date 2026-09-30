@@ -394,7 +394,7 @@ pub fn create_action(app: tauri::AppHandle, input: NewAction) -> Result<ActionRo
 pub fn prepare_action(app: tauri::AppHandle, id:String, payload:serde_json::Value) -> Result<ActionRow,String> {
     let db=conn(&app)?;
     let current=get_action(&db,&id)?;
-    if !allowed_transition(&current.status,"prepared") { return Err(format!("Invalid action transition: {} -> prepared",current.status)); }
+    if current.status!="requested" && current.status!="prepared" { return Err(format!("Invalid action transition: {} -> prepared",current.status)); }
     let now=Utc::now().to_rfc3339();
     db.execute("UPDATE actions SET status='prepared',payload=?1,updated_at=?2 WHERE id=?3",params![payload.to_string(),now,id]).map_err(|e|e.to_string())?;
     get_action(&db,&id)
@@ -455,7 +455,7 @@ pub fn generate_action_draft(app:tauri::AppHandle, action_id:String)->Result<cra
     let request=crate::ai::DraftRequest{purpose:action.action_type.clone(),context};
     let draft=crate::ai::provider().generate_draft(&request)?;
     let now=Utc::now().to_rfc3339();
-    let payload=serde_json::json!({"message":draft.content,"provider":draft.provider}).to_string();
+    let payload=serde_json::json!({"message":draft.content.clone(),"provider":draft.provider.clone()}).to_string();
     db.execute("UPDATE actions SET status='prepared',payload=?1,updated_at=?2 WHERE id=?3",params![payload,now,action_id]).map_err(|e|e.to_string())?;
     Ok(draft)
 }
