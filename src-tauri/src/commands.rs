@@ -442,3 +442,21 @@ pub fn cancel_action(app:tauri::AppHandle,id:String)->Result<ActionRow,String>{
     db.execute("UPDATE actions SET status='cancelled',updated_at=?1 WHERE id=?2",params![now,id]).map_err(|e|e.to_string())?;
     get_action(&db,&id)
 }
+
+
+#[tauri::command]
+pub fn generate_action_draft(app:tauri::AppHandle, action_id:String)->Result<crate::ai::DraftResponse,String>{
+    let db=conn(&app)?;
+    let action=get_action(&db,&action_id)?;
+    if action.status!="requested" && action.status!="prepared" {
+        return Err(format!("Action cannot be drafted from status {}",action.status));
+    }
+    if action.entity_type!="application" { return Err("Draft generation currently requires an application action".into()); }
+    let context=crate::context::application_context(&db,&action.entity_id)?;
+    let request=crate::ai::DraftRequest{purpose:action.action_type.clone(),context};
+    let draft=crate::ai::provider().generate_draft(&request)?;
+    let now=Utc::now().to_rfc3339();
+    let payload=serde_json::json!({"message":draft.content,"provider":draft.provider}).to_string();
+    db.execute("UPDATE actions SET status='prepared',payload=?1,updated_at=?2 WHERE id=?3",params![payload,now,action_id]).map_err(|e|e.to_string())?;
+    Ok(draft)
+}
