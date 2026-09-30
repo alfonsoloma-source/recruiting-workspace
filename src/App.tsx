@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Plug, Search, Sparkles, UsersRound, BriefcaseBusiness, ArrowLeft } from "lucide-react";
-import { recruiting, CandidateWorkspace, JobWorkspace, HomeWorkspace } from "./lib/recruiting";
+import { recruiting, CandidateWorkspace, JobWorkspace, HomeWorkspace, InterviewWorkspace } from "./lib/recruiting";
 
 type View = "home" | "candidates" | "candidate" | "jobs" | "job" | "agenda" | "connections";
 
@@ -14,14 +14,14 @@ export default function App() {
   const [jobs,setJobs]=useState<JobWorkspace[]>([]);
   const [selectedJob,setSelectedJob]=useState<JobWorkspace|null>(null);
   const [jobRows,setJobRows]=useState<CandidateWorkspace[]>([]);
-  const [home,setHome]=useState<HomeWorkspace|null>(null);
+  const [home,setHome]=useState<HomeWorkspace|null>(null);\n  const [interviews,setInterviews]=useState<InterviewWorkspace[]>([]);
 
   async function loadCandidates(){
     setLoading(true);
     try { setRows(await recruiting.listCandidateWorkspace()); }
     finally { setLoading(false); }
   }
-  useEffect(()=>{ if(view==="home") recruiting.getHomeWorkspace().then(setHome); if(view==="candidates") loadCandidates(); if(view==="jobs") recruiting.listJobWorkspace().then(setJobs); },[view]);
+  useEffect(()=>{ if(view==="home") recruiting.getHomeWorkspace().then(setHome); if(view==="candidates") loadCandidates(); if(view==="jobs") recruiting.listJobWorkspace().then(setJobs); if(view==="agenda") recruiting.listInterviews().then(setInterviews); },[view]);
 
   async function openJob(job:JobWorkspace){ setSelectedJob(job); setJobRows(await recruiting.listJobApplications(job.job_id)); setView("job"); }
 
@@ -44,7 +44,7 @@ export default function App() {
       {view==="candidate" && selected && <CandidateDetail row={selected} back={()=>setView("candidates")} refresh={loadCandidates}/>}
       {view==="jobs" && <Jobs jobs={jobs} openJob={openJob}/>}
       {view==="job" && selectedJob && <JobDetail job={selectedJob} rows={jobRows} back={()=>setView("jobs")} openCandidate={openCandidate}/>}
-      {view==="agenda" && <Placeholder title="Agenda" text="Aquí aparecerán únicamente entrevistas y disponibilidad relevante."/>}
+      {view==="agenda" && <Agenda interviews={interviews} openCandidate={openCandidate}/>}
       {view==="connections" && <Placeholder title="Conexiones" text="Tus herramientas, permisos y proveedores vivirán aquí."/>}
     </main>
   </div>;
