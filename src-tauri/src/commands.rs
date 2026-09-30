@@ -267,3 +267,57 @@ pub fn get_home_workspace(app: tauri::AppHandle) -> Result<HomeWorkspace, String
 
     Ok(HomeWorkspace { pending_count, interview_today_count, new_count, attention, new_candidates })
 }
+
+
+#[derive(Debug, Serialize)]
+pub struct InterviewWorkspaceRow {
+    pub interview_id: String,
+    pub application_id: String,
+    pub candidate_id: String,
+    pub candidate_name: String,
+    pub job_title: String,
+    pub stage: String,
+    pub starts_at: String,
+    pub ends_at: String,
+    pub status: String,
+    pub provider: Option<String>,
+}
+
+#[tauri::command]
+pub fn list_interview_workspace(app: tauri::AppHandle) -> Result<Vec<InterviewWorkspaceRow>, String> {
+    let db = conn(&app)?;
+    let mut stmt = db.prepare(
+        "SELECT i.id,a.id,c.id,c.name,j.title,a.stage,i.starts_at,i.ends_at,i.status,i.provider
+         FROM interviews i
+         JOIN applications a ON a.id=i.application_id
+         JOIN candidates c ON c.id=a.candidate_id
+         JOIN jobs j ON j.id=a.job_id
+         WHERE i.status IN ('scheduled','needs_reschedule')
+         ORDER BY i.starts_at ASC"
+    ).map_err(|e| e.to_string())?;
+    let rows = stmt.query_map([], |r| Ok(InterviewWorkspaceRow {
+        interview_id:r.get(0)?, application_id:r.get(1)?, candidate_id:r.get(2)?,
+        candidate_name:r.get(3)?, job_title:r.get(4)?, stage:r.get(5)?,
+        starts_at:r.get(6)?, ends_at:r.get(7)?, status:r.get(8)?, provider:r.get(9)?
+    })).map_err(|e| e.to_string())?;
+    rows.collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct NewInterview {
+    pub application_id: String,
+    pub starts_at: String,
+    pub ends_at: String,
+    pub provider: Option<String>,
+}
+
+#[tauri::command]
+pub fn create_interview(app: tauri::AppHandle, input: NewInterview) -> Result<String, String> {
+    let db = conn(&app)?;
+    let id = Uuid::new_v4().to_string();
+    db.execute(
+        "INSERT INTO interviews(id,application_id,starts_at,ends_at,status,provider) VALUES(?1,?2,?3,?4,'scheduled',?5)",
+        params![id,input.application_id,input.starts_at,input.ends_at,input.provider]
+    ).map_err(|e| e.to_string())?;
+    Ok(id)
+}
