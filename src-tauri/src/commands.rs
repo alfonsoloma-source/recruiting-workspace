@@ -321,3 +321,124 @@ pub fn create_interview(app: tauri::AppHandle, input: NewInterview) -> Result<St
     ).map_err(|e| e.to_string())?;
     Ok(id)
 }
+
+
+#[derive(Debug, Serialize)]
+pub struct ActionRow {
+    pub id: String,
+    pub action_type: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub status: String,
+    pub due_at: Option<String>,
+    pub requires_confirmation: bool,
+    pub payload: serde_json::Value,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+fn get_action(db: &Connection, id: &str) -> Result<ActionRow, String> {
+    db.query_row(
+        "SELECT id,type,entity_type,entity_id,status,due_at,requires_confirmation,payload,created_at,updated_at FROM actions WHERE id=?1",
+        [id],
+        |r| {
+            let raw: String = r.get(7)?;
+            Ok(ActionRow {
+                id:r.get(0)?, action_type:r.get(1)?, entity_type:r.get(2)?, entity_id:r.get(3)?,
+                status:r.get(4)?, due_at:r.get(5)?, requires_confirmation:r.get::<_,i64>(6)? != 0,
+                payload:serde_json::from_str(&raw).unwrap_or(serde_json::json!({})),
+                created_at:r.get(8)?, updated_at:r.get(9)?
+            })
+        }
+    ).map_err(|e| e.to_string())
+}
+
+fn allowed_transition(from: &str, to: &str) -> bool {
+    matches!((from,to),
+        ("requested","prepared") |
+        ("prepared","awaiting_confirmation") |
+        ("awaiting_confirmation","executing") |
+        ("executing","completed") |
+        ("requested","cancelled") |
+        ("prepared","cancelled") |
+        ("awaiting_confirmation","cancelled") |
+        ("executing","failed")
+    )
+}
+
+#[derive(Debug, Deserialize)]
+pub struct NewAction {
+    pub action_type: String,
+    pub entity_type: String,
+    pub entity_id: String,
+    pub due_at: Option<String>,
+    pub requires_confirmation: Option<bool>,
+    pub payload: Option<serde_json::Value>,
+}
+
+#[tauri::command]
+pub fn create_action(app: tauri::AppHandle, input: NewAction) -> Result<ActionRow, String> {
+    let db=conn(&app)?;
+    let id=Uuid::new_v4().to_string();
+    let now=Utc::now().to_rfc3339();
+    let requires=input.requires_confirmation.unwrap_or(false);
+    let payload=input.payload.unwrap_or(serde_json::json!({})).to_string();
+    db.execute(
+        "INSERT INTO actions(id,type,entity_type,entity_id,status,due_at,requires_confirmation,payload,created_at,updated_at)
+         VALUES(?1,?2,?3,?4,'requested',?5,?6,?7,?8,?8)",
+        params![id,input.action_type,input.entity_type,input.entity_id,input.due_at,requires as i64,payload,now]
+    ).map_err(|e|e.to_string())?;
+    get_action(&db,&id)
+}
+
+#[tauri::command]
+pub fn prepare_action(app: tauri::AppHandle, id:String, payload:serde_json::Value) -> Result<ActionRow,String> {
+    let db=conn(&app)?;
+    let current=get_action(&db,&id)?;
+    if !allowed_transition(&current.status,"prepared") { return Err(format!("Invalid action transition: {} -> prepared",current.status)); }
+    let now=Utc::now().to_rfc3339();
+    db.execute("UPDATE actions SET status='prepared',payload=?1,updated_at=?2 WHERE id=?3",params![payload.to_string(),now,id]).map_err(|e|e.to_string())?;
+    get_action(&db,&id)
+}
+
+#[tauri::command]
+pub fn request_action_confirmation(app:tauri::AppHandle,id:String)->Result<ActionRow,String>{
+    let db=conn(&app)?;
+    let current=get_action(&db,&id)?;
+    if !current.requires_confirmation { return Err("This action does not require confirmation".into()); }
+    if !allowed_transition(&current.status,"awaiting_confirmation") { return Err(format!("Invalid action transition: {} -> awaiting_confirmation",current.status)); }
+    let now=Utc::now().to_rfc3339();
+    db.execute("UPDATE actions SET status='awaiting_confirmation',updated_at=?1 WHERE id=?2",params![now,id]).map_err(|e|e.to_string())?;
+    get_action(&db,&id)
+}
+
+#[tauri::command]
+pub fn confirm_action(app:tauri::AppHandle,id:String)->Result<ActionRow,String>{
+    let db=conn(&app)?;
+    let current=get_action(&db,&id)?;
+    if !current.requires_confirmation { return Err("Confirmation is not required for this action".into()); }
+    if !allowed_transition(&current.status,"executing") { return Err(format!("Invalid action transition: {} -> executing",current.status)); }
+    let now=Utc::now().to_rfc3339();
+    db.execute("UPDATE actions SET status='executing',updated_at=?1 WHERE id=?2",params![now,id]).map_err(|e|e.to_string())?;
+    get_action(&db,&id)
+}
+
+#[tauri::command]
+pub fn complete_action(app:tauri::AppHandle,id:String)->Result<ActionRow,String>{
+    let db=conn(&app)?;
+    let current=get_action(&db,&id)?;
+    if !allowed_transition(&current.status,"completed") { return Err(format!("Invalid action transition: {} -> completed",current.status)); }
+    let now=Utc::now().to_rfc3339();
+    db.execute("UPDATE actions SET status='completed',updated_at=?1 WHERE id=?2",params![now,id]).map_err(|e|e.to_string())?;
+    get_action(&db,&id)
+}
+
+#[tauri::command]
+pub fn cancel_action(app:tauri::AppHandle,id:String)->Result<ActionRow,String>{
+    let db=conn(&app)?;
+    let current=get_action(&db,&id)?;
+    if !allowed_transition(&current.status,"cancelled") { return Err(format!("Invalid action transition: {} -> cancelled",current.status)); }
+    let now=Utc::now().to_rfc3339();
+    db.execute("UPDATE actions SET status='cancelled',updated_at=?1 WHERE id=?2",params![now,id]).map_err(|e|e.to_string())?;
+    get_action(&db,&id)
+}
