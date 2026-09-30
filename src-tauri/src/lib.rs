@@ -3,6 +3,7 @@ mod commands;
 mod context;
 mod db;
 mod models;
+mod settings;
 
 use tauri::Manager;
 
@@ -36,7 +37,9 @@ pub fn run() {
             commands::confirm_action,
             commands::complete_action,
             commands::cancel_action,
-            commands::generate_action_draft
+            commands::generate_action_draft,
+            settings::get_ai_settings,
+            settings::save_ai_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running Recruiting Workspace");
