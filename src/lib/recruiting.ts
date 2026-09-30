@@ -95,7 +95,14 @@ export type WorkspaceAction = {
   updated_at: string;
 };
 
+export type AiSettings = {
+  provider: "local-template" | "openai" | "anthropic" | "gemini";
+  model?: string | null;
+};
+
 export const recruiting = {
+  getAiSettings: () => invoke<AiSettings>("get_ai_settings"),
+  saveAiSettings: (settings: AiSettings) => invoke<AiSettings>("save_ai_settings", { settings }),
   generateActionDraft: (actionId:string) => invoke<{provider:string;content:string}>("generate_action_draft",{actionId}),
   createAction: (input: { action_type:string; entity_type:string; entity_id:string; due_at?:string|null; requires_confirmation?:boolean; payload?:Record<string,unknown> }) => invoke<WorkspaceAction>("create_action",{input}),
   prepareAction: (id:string,payload:Record<string,unknown>) => invoke<WorkspaceAction>("prepare_action",{id,payload}),
