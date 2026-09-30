@@ -46,7 +46,28 @@ export type CandidateWorkspace = {
   finalist_count: number;
 };
 
+export type AttentionItem = {
+  action_id: string;
+  application_id: string;
+  candidate_id: string;
+  candidate_name: string;
+  job_title: string;
+  stage: string;
+  action_type: string;
+  due_at?: string | null;
+  requires_confirmation: boolean;
+};
+
+export type HomeWorkspace = {
+  pending_count: number;
+  interview_today_count: number;
+  new_count: number;
+  attention: AttentionItem[];
+  new_candidates: CandidateWorkspace[];
+};
+
 export const recruiting = {
+  getHomeWorkspace: () => invoke<HomeWorkspace>("get_home_workspace"),
   listCandidates: () => invoke<Candidate[]>("list_candidates"),\n  listCandidateWorkspace: () => invoke<CandidateWorkspace[]>("list_candidate_workspace"),
   createCandidate: (input: Omit<Candidate, "id">) =>
     invoke<Candidate>("create_candidate", { input }),
