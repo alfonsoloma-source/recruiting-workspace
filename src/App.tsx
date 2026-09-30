@@ -47,7 +47,7 @@ export default function App() {
       {view==="jobs" && <Jobs jobs={jobs} openJob={openJob}/>}
       {view==="job" && selectedJob && <JobDetail job={selectedJob} rows={jobRows} back={()=>setView("jobs")} openCandidate={openCandidate}/>}
       {view==="agenda" && <Agenda interviews={interviews} openCandidate={openCandidate}/>}
-      {view==="connections" && <Placeholder title="Conexiones" text="Tus herramientas, permisos y proveedores vivirán aquí."/>}
+      {view==="connections" && <Connections/>}
       {draftAction && <ActionComposer draft={draftAction} setDraft={setDraftAction} close={()=>setDraftAction(null)} refreshHome={()=>recruiting.getHomeWorkspace().then(setHome)}/>}
     </main>
   </div>;
@@ -94,6 +94,20 @@ function JobDetail({job,rows,back,openCandidate}:{job:JobWorkspace;rows:Candidat
 
 function Agenda({interviews,openCandidate}:{interviews:InterviewWorkspace[];openCandidate:(r:CandidateWorkspace)=>void}){
  return <><PageHeader eyebrow="AGENDA" title="Entrevistas" subtitle="Solo eventos relacionados con tus procesos de selección."/><section className="panel">{interviews.map(i=><button className="listRow" key={i.interview_id} onClick={()=>openCandidate({application_id:i.application_id,candidate_id:i.candidate_id,candidate_name:i.candidate_name,email:null,job_id:"",job_title:i.job_title,stage:i.stage,status:"active",updated_at:i.starts_at})}><div><strong>{i.candidate_name}</strong><span>{i.job_title} · {new Date(i.starts_at).toLocaleString()}</span></div><span>{i.status}</span></button>)}{!interviews.length&&<p className="emptyState">No hay entrevistas programadas.</p>}</section></>;
+}
+
+function Connections(){
+ const [provider,setProvider]=useState<"local-template"|"openai"|"anthropic"|"gemini">("local-template");
+ const [model,setModel]=useState(""); const [saved,setSaved]=useState(false);
+ useEffect(()=>{recruiting.getAiSettings().then(s=>{setProvider(s.provider);setModel(s.model||"");}).catch(()=>{});},[]);
+ async function save(){await recruiting.saveAiSettings({provider,model:model.trim()||null});setSaved(true);setTimeout(()=>setSaved(false),1500);}
+ return <><PageHeader eyebrow="CONEXIONES" title="Conexiones" subtitle="Conecta tus herramientas sin perder el control sobre tus datos."/>
+ <section className="panel"><div className="sectionTitle"><span>INTELIGENCIA ARTIFICIAL</span><small>{provider==="local-template"?"Base local":"Configurado"}</small></div>
+ <p>Elige qué proveedor quieres usar. Recruiting Workspace seguirá funcionando sin una IA externa.</p>
+ <label>Proveedor</label><select value={provider} onChange={e=>setProvider(e.target.value as typeof provider)}><option value="local-template">Local · plantilla incluida</option><option value="openai">OpenAI</option><option value="anthropic">Claude / Anthropic</option><option value="gemini">Gemini</option></select>
+ <label>Modelo <small>(opcional)</small></label><input value={model} onChange={e=>setModel(e.target.value)} placeholder="Usar predeterminado del proveedor"/>
+ <div className="actions"><button className="primary" onClick={save}>Guardar configuración</button>{saved&&<span>Guardado</span>}</div>
+ <p className="confirmText">Las API keys no se guardan aquí. Las credenciales sensibles se manejarán mediante almacenamiento seguro del sistema operativo.</p></section></>;
 }
 
 function Placeholder({title,text}:{title:string;text:string}){return <><PageHeader eyebrow="WORKSPACE" title={title} subtitle={text}/><section className="panel"><p className="emptyState">Esta sección se habilitará por capacidades, sin obligar al recruiter a configurar herramientas técnicas.</p></section></>}
