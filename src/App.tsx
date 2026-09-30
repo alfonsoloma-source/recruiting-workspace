@@ -98,16 +98,20 @@ function Agenda({interviews,openCandidate}:{interviews:InterviewWorkspace[];open
 
 function Connections(){
  const [provider,setProvider]=useState<"local-template"|"openai"|"anthropic"|"gemini">("local-template");
- const [model,setModel]=useState(""); const [saved,setSaved]=useState(false);
+ const [model,setModel]=useState(""); const [saved,setSaved]=useState(false); const [secret,setSecret]=useState(""); const [credential,setCredential]=useState(false);
  useEffect(()=>{recruiting.getAiSettings().then(s=>{setProvider(s.provider);setModel(s.model||"");}).catch(()=>{});},[]);
+ useEffect(()=>{if(provider==="local-template"){setCredential(false);return;} recruiting.credentialStatus(provider).then(s=>setCredential(s.configured)).catch(()=>setCredential(false));setSecret("");},[provider]);
  async function save(){await recruiting.saveAiSettings({provider,model:model.trim()||null});setSaved(true);setTimeout(()=>setSaved(false),1500);}
+ async function saveKey(){if(!secret.trim()||provider==="local-template")return;await recruiting.saveProviderCredential(provider,secret);setSecret("");setCredential(true);}
+ async function removeKey(){if(provider==="local-template")return;await recruiting.deleteProviderCredential(provider);setCredential(false);setSecret("");}
  return <><PageHeader eyebrow="CONEXIONES" title="Conexiones" subtitle="Conecta tus herramientas sin perder el control sobre tus datos."/>
- <section className="panel"><div className="sectionTitle"><span>INTELIGENCIA ARTIFICIAL</span><small>{provider==="local-template"?"Base local":"Configurado"}</small></div>
+ <section className="panel"><div className="sectionTitle"><span>INTELIGENCIA ARTIFICIAL</span><small>{provider==="local-template"?"Base local":credential?"Credencial segura":"Falta credencial"}</small></div>
  <p>Elige qué proveedor quieres usar. Recruiting Workspace seguirá funcionando sin una IA externa.</p>
  <label>Proveedor</label><select value={provider} onChange={e=>setProvider(e.target.value as typeof provider)}><option value="local-template">Local · plantilla incluida</option><option value="openai">OpenAI</option><option value="anthropic">Claude / Anthropic</option><option value="gemini">Gemini</option></select>
  <label>Modelo <small>(opcional)</small></label><input value={model} onChange={e=>setModel(e.target.value)} placeholder="Usar predeterminado del proveedor"/>
  <div className="actions"><button className="primary" onClick={save}>Guardar configuración</button>{saved&&<span>Guardado</span>}</div>
- <p className="confirmText">Las API keys no se guardan aquí. Las credenciales sensibles se manejarán mediante almacenamiento seguro del sistema operativo.</p></section></>;
+ {provider!=="local-template"&&<div><label>API key</label><input type="password" autoComplete="off" value={secret} onChange={e=>setSecret(e.target.value)} placeholder={credential?"Credencial guardada de forma segura":"Pega tu API key"}/><div className="actions"><button onClick={saveKey} disabled={!secret.trim()}>Guardar credencial</button>{credential&&<button onClick={removeKey}>Eliminar credencial</button>}</div></div>}
+ <p className="confirmText">La API key se guarda en el almacén seguro del sistema operativo; no se escribe en SQLite ni en settings.json.</p></section></>;
 }
 
 function Placeholder({title,text}:{title:string;text:string}){return <><PageHeader eyebrow="WORKSPACE" title={title} subtitle={text}/><section className="panel"><p className="emptyState">Esta sección se habilitará por capacidades, sin obligar al recruiter a configurar herramientas técnicas.</p></section></>}
