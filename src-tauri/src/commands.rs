@@ -193,3 +193,77 @@ pub fn list_job_applications(app: tauri::AppHandle, job_id: String) -> Result<Ve
     })).map_err(|e| e.to_string())?;
     rows.collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())
 }
+
+
+#[derive(Debug, Serialize)]
+pub struct AttentionRow {
+    pub action_id: String,
+    pub application_id: String,
+    pub candidate_id: String,
+    pub candidate_name: String,
+    pub job_title: String,
+    pub stage: String,
+    pub action_type: String,
+    pub due_at: Option<String>,
+    pub requires_confirmation: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct HomeWorkspace {
+    pub pending_count: i64,
+    pub interview_today_count: i64,
+    pub new_count: i64,
+    pub attention: Vec<AttentionRow>,
+    pub new_candidates: Vec<CandidateWorkspaceRow>,
+}
+
+#[tauri::command]
+pub fn get_home_workspace(app: tauri::AppHandle) -> Result<HomeWorkspace, String> {
+    let db = conn(&app)?;
+
+    let pending_count: i64 = db.query_row(
+        "SELECT COUNT(*) FROM actions WHERE status IN ('requested','prepared','awaiting_confirmation')",
+        [], |r| r.get(0)
+    ).map_err(|e| e.to_string())?;
+
+    let interview_today_count: i64 = db.query_row(
+        "SELECT COUNT(*) FROM interviews WHERE status='scheduled' AND date(starts_at)=date('now','localtime')",
+        [], |r| r.get(0)
+    ).map_err(|e| e.to_string())?;
+
+    let new_count: i64 = db.query_row(
+        "SELECT COUNT(*) FROM applications WHERE status='active' AND LOWER(stage) IN ('new','nuevo')",
+        [], |r| r.get(0)
+    ).map_err(|e| e.to_string())?;
+
+    let mut attention_stmt = db.prepare(
+        "SELECT ac.id,a.id,c.id,c.name,j.title,a.stage,ac.type,ac.due_at,ac.requires_confirmation
+         FROM actions ac
+         JOIN applications a ON ac.entity_type='application' AND ac.entity_id=a.id
+         JOIN candidates c ON c.id=a.candidate_id
+         JOIN jobs j ON j.id=a.job_id
+         WHERE ac.status IN ('requested','prepared','awaiting_confirmation')
+         ORDER BY CASE WHEN ac.due_at IS NULL THEN 1 ELSE 0 END, ac.due_at ASC"
+    ).map_err(|e| e.to_string())?;
+    let attention = attention_stmt.query_map([], |r| Ok(AttentionRow {
+        action_id:r.get(0)?, application_id:r.get(1)?, candidate_id:r.get(2)?,
+        candidate_name:r.get(3)?, job_title:r.get(4)?, stage:r.get(5)?,
+        action_type:r.get(6)?, due_at:r.get(7)?, requires_confirmation:r.get::<_,i64>(8)? != 0
+    })).map_err(|e| e.to_string())?
+      .collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())?;
+
+    let mut new_stmt = db.prepare(
+        "SELECT a.id,c.id,c.name,c.email,j.id,j.title,a.stage,a.status,a.updated_at
+         FROM applications a JOIN candidates c ON c.id=a.candidate_id JOIN jobs j ON j.id=a.job_id
+         WHERE a.status='active' AND LOWER(a.stage) IN ('new','nuevo')
+         ORDER BY a.updated_at DESC LIMIT 5"
+    ).map_err(|e| e.to_string())?;
+    let new_candidates = new_stmt.query_map([], |r| Ok(CandidateWorkspaceRow {
+        application_id:r.get(0)?, candidate_id:r.get(1)?, candidate_name:r.get(2)?,
+        email:r.get(3)?, job_id:r.get(4)?, job_title:r.get(5)?, stage:r.get(6)?,
+        status:r.get(7)?, updated_at:r.get(8)?
+    })).map_err(|e| e.to_string())?
+      .collect::<Result<Vec<_>,_>>().map_err(|e| e.to_string())?;
+
+    Ok(HomeWorkspace { pending_count, interview_today_count, new_count, attention, new_candidates })
+}
