@@ -1,7 +1,6 @@
 use chrono::Utc;
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tauri::Manager;
 use uuid::Uuid;
 
