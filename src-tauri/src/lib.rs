@@ -1,3 +1,4 @@
+mod commands;
 mod db;
 mod models;
 
@@ -12,6 +13,15 @@ pub fn run() {
             db::open(app_data_dir).map_err(|error| Box::<dyn std::error::Error>::from(error))?;
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            commands::list_candidates,
+            commands::create_candidate,
+            commands::list_jobs,
+            commands::create_job,
+            commands::create_application,
+            commands::update_application_stage,
+            commands::add_candidate_note
+        ])
         .run(tauri::generate_context!())
         .expect("error while running Recruiting Workspace");
 }
