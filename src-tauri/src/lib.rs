@@ -1,6 +1,7 @@
 mod ai;
 mod commands;
 mod context;
+mod credentials;
 mod db;
 mod models;
 mod settings;
@@ -39,7 +40,10 @@ pub fn run() {
             commands::cancel_action,
             commands::generate_action_draft,
             settings::get_ai_settings,
-            settings::save_ai_settings
+            settings::save_ai_settings,
+            credentials::credential_status,
+            credentials::save_provider_credential,
+            credentials::delete_provider_credential
         ])
         .run(tauri::generate_context!())
         .expect("error while running Recruiting Workspace");
