@@ -79,7 +79,26 @@ export type InterviewWorkspace = {
   provider?: string | null;
 };
 
+export type WorkspaceAction = {
+  id: string;
+  action_type: string;
+  entity_type: string;
+  entity_id: string;
+  status: "requested" | "prepared" | "awaiting_confirmation" | "executing" | "completed" | "cancelled" | "failed";
+  due_at?: string | null;
+  requires_confirmation: boolean;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
 export const recruiting = {
+  createAction: (input: { action_type:string; entity_type:string; entity_id:string; due_at?:string|null; requires_confirmation?:boolean; payload?:Record<string,unknown> }) => invoke<WorkspaceAction>("create_action",{input}),
+  prepareAction: (id:string,payload:Record<string,unknown>) => invoke<WorkspaceAction>("prepare_action",{id,payload}),
+  requestActionConfirmation: (id:string) => invoke<WorkspaceAction>("request_action_confirmation",{id}),
+  confirmAction: (id:string) => invoke<WorkspaceAction>("confirm_action",{id}),
+  completeAction: (id:string) => invoke<WorkspaceAction>("complete_action",{id}),
+  cancelAction: (id:string) => invoke<WorkspaceAction>("cancel_action",{id}),
   getHomeWorkspace: () => invoke<HomeWorkspace>("get_home_workspace"),
   listInterviews: () => invoke<InterviewWorkspace[]>("list_interview_workspace"),
   createInterview: (input: { application_id: string; starts_at: string; ends_at: string; provider?: string | null }) => invoke<string>("create_interview", { input }),
